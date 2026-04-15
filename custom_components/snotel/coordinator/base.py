@@ -13,9 +13,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from custom_components.snotel.api import SnotelApiClientAuthenticationError, SnotelApiClientError
-from custom_components.snotel.const import LOGGER
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from custom_components.snotel.api import SnotelApiClientError
+from custom_components.snotel.const import CONF_STATION, LOGGER
+from custom_components.snotel.coordinator.data_processing import transform_api_data
+from custom_components.snotel.snotel_api.api.data import get_data
+from custom_components.snotel.snotel_api.api.station_metadata import get_stations
+from custom_components.snotel.snotel_api.errors import UnexpectedStatus
+from custom_components.snotel.snotel_api.models.get_data_duration import GetDataDuration
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
@@ -59,6 +64,14 @@ class SnotelDataUpdateCoordinator(DataUpdateCoordinator):
         # Example: Fetch device info once at startup
         # device_info = await self.config_entry.runtime_data.client.get_device_info()
         # self._device_id = device_info["id"]
+        async with self.config_entry.runtime_data.client as client:
+            stations = await get_stations.asyncio(client=client, station_triplets=self.config_entry.data[CONF_STATION])
+            if stations and len(stations) == 1:
+                self._station = stations[0]
+                self._station_timezone = self._station.data_time_zone or 0.0
+            else:
+                raise ConfigEntryNotReady("could not get station info")
+
         LOGGER.debug("Coordinator setup complete for %s", self.config_entry.entry_id)
 
     async def _async_update_data(self) -> Any:
@@ -104,14 +117,24 @@ class SnotelDataUpdateCoordinator(DataUpdateCoordinator):
             # Fetch data from API
             # In production, you could pass listening_contexts to optimize the API call:
             # return await self.config_entry.runtime_data.client.async_get_data(listening_contexts)
-            return await self.config_entry.runtime_data.client.async_get_data()
-        except SnotelApiClientAuthenticationError as exception:
-            LOGGER.warning("Authentication error - %s", exception)
-            raise ConfigEntryAuthFailed(
-                translation_domain="snotel",
-                translation_key="authentication_failed",
-            ) from exception
+            async with self.config_entry.runtime_data.client as client:
+                return transform_api_data(
+                    await get_data.asyncio(
+                        client=client,
+                        station_triplets=self.config_entry.data[CONF_STATION],
+                        elements="PREC,SNWD,TOBS,WTEQ",
+                        duration=GetDataDuration.HOURLY,
+                        begin_date="0",
+                    ),
+                    self._station_timezone,
+                )
         except SnotelApiClientError as exception:
+            LOGGER.warning("API error - %s", exception)
+            raise UpdateFailed(
+                translation_domain="snotel",
+                translation_key="update_failed",
+            ) from exception
+        except UnexpectedStatus as exception:
             LOGGER.exception("Error communicating with API")
             # If the API provides rate limit information, you can honor it:
             # if hasattr(exception, 'retry_after'):

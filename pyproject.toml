@@ -74,6 +74,9 @@ exclude_lines = [
 required-version = ">=0.15.1"
 target-version = "py314"
 line-length = 120
+extend-exclude = ["custom_components/snotel/snotel_api/**"]
+exclude = ["custom_components/snotel/snotel_api/**"]
+
 
 [tool.ruff.lint]
 select = [

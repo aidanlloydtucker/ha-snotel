@@ -17,8 +17,8 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.loader import Integration
 
-    from .api import SnotelApiClient
     from .coordinator import SnotelDataUpdateCoordinator
+    from .snotel_api import SnotelAPIClient
 
 
 type SnotelConfigEntry = ConfigEntry[SnotelData]
@@ -32,6 +32,6 @@ class SnotelData:
     Provides typed access to the API client and coordinator instances.
     """
 
-    client: SnotelApiClient
+    client: SnotelAPIClient
     coordinator: SnotelDataUpdateCoordinator
     integration: Integration

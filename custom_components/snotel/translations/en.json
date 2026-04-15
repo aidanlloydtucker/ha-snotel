@@ -4,8 +4,7 @@
       "user": {
         "description": "If you need help with the configuration have a look at the [documentation]({documentation_url}).",
         "data": {
-          "username": "Username",
-          "password": "Password"
+          "station": "Station"
         }
       },
       "reconfigure": {
@@ -70,59 +69,20 @@
   },
   "entity": {
     "sensor": {
-      "air_quality_index": {
-        "name": "Air Quality Index"
+      "precip_accumulation": {
+        "name": "Precip Accumulation (Water Year)"
       },
-      "pm25": {
-        "name": "PM2.5"
+      "snow_depth": {
+        "name": "Snow Depth"
       },
-      "filter_life": {
-        "name": "Filter Life Remaining"
+      "temperature": {
+        "name": "Temperature"
       },
-      "runtime": {
-        "name": "Total Runtime"
-      }
-    },
-    "binary_sensor": {
-      "api_connectivity": {
-        "name": "API Connection"
+      "snow_water_equivalent": {
+        "name": "Snow Water Equivalent"
       },
-      "filter_replacement": {
-        "name": "Filter Replacement Needed"
-      }
-    },
-    "switch": {
-      "child_lock": {
-        "name": "Child Lock"
-      },
-      "led_display": {
-        "name": "LED Display"
-      }
-    },
-    "select": {
-      "fan_speed": {
-        "name": "Fan Speed",
-        "state": {
-          "low": "Low",
-          "medium": "Medium",
-          "high": "High",
-          "auto": "Auto"
-        }
-      }
-    },
-    "number": {
-      "target_humidity": {
-        "name": "Target Humidity"
-      }
-    },
-    "button": {
-      "reset_filter": {
-        "name": "Reset Filter Timer"
-      }
-    },
-    "fan": {
-      "air_purifier": {
-        "name": "Air Purifier"
+      "last_updated": {
+        "name": "Last Updated"
       }
     }
   },

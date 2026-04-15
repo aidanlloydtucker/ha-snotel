@@ -13,6 +13,7 @@ Use cases:
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from custom_components.snotel.const import LOGGER
@@ -33,8 +34,17 @@ def validate_api_response(data: Any) -> bool:
         >>> validate_api_response(data)
         True
     """
-    if not isinstance(data, dict):
-        LOGGER.warning("Invalid API response: expected dict, got %s", type(data).__name__)
+    if not isinstance(data, list):
+        LOGGER.warning("Invalid API response: expected list, got %s", type(data).__name__)
+        return False
+    if len(data) != 1:
+        LOGGER.warning("Invalid API response: expected list of length 1, got %d", len(data))
+        return False
+    if not isinstance(data[0].data, list):
+        LOGGER.warning("Invalid API response: expected data[0].data list, got %s", type(data).__name__)
+        return False
+    if len(data[0].data) <= 0:
+        LOGGER.warning("Invalid API response: expected data[0].data list of length non zero, got %v", len(data))
         return False
 
     # Add validation logic based on your API structure
@@ -42,7 +52,7 @@ def validate_api_response(data: Any) -> bool:
     return True
 
 
-def transform_api_data(raw_data: Any) -> dict[str, Any]:
+def transform_api_data(raw_data: Any, station_tz: float) -> dict[str, Any]:
     """
     Transform raw API data into a standardized format for entities.
 
@@ -65,11 +75,19 @@ def transform_api_data(raw_data: Any) -> dict[str, Any]:
     """
     if not validate_api_response(raw_data):
         LOGGER.warning("Skipping transformation of invalid data")
-        return raw_data if isinstance(raw_data, dict) else {}
+        return {}
 
-    # Transform data as needed
-    # This is a placeholder for future implementation
-    return raw_data
+    data_map = {}
+    timestamp = ""
+    for datum in raw_data[0].data or []:
+        if datum.station_element and datum.values and len(datum.values) > 0:
+            data_map[element_code_to_entity_key(datum.station_element.element_code)] = datum.values[0].value
+            if datum.values[0].date:
+                if timestamp == "" or datum.values[0].date > timestamp:
+                    timestamp = datum.values[0].date
+    dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M")
+    data_map["last_updated"] = dt.replace(tzinfo=timezone(timedelta(hours=station_tz)))
+    return data_map
 
 
 def cache_computed_values(data: dict[str, Any]) -> dict[str, Any]:
@@ -93,3 +111,14 @@ def cache_computed_values(data: dict[str, Any]) -> dict[str, Any]:
     # Add computed values as needed
     # This is a placeholder for future implementation
     return data
+
+
+def element_code_to_entity_key(element_code) -> str:
+    """Converts element codes from API into entity keys."""
+    codes = {
+        "PREC": "precip_accumulation",
+        "SNWD": "snow_depth",
+        "TOBS": "temperature",
+        "WTEQ": "snow_water_equivalent",
+    }
+    return codes.get(element_code, "")

@@ -19,11 +19,17 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from custom_components.snotel.const import CONF_STATION
 from homeassistant.helpers import selector
 
+DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_STATION): str,
+    }
+)
 
-def get_user_schema(defaults: Mapping[str, Any] | None = None) -> vol.Schema:
+
+def get_user_schema(defaults: Mapping[str, Any] | None = None, stations: Mapping[str, str] | None = None) -> vol.Schema:
     """
     Get schema for user step (initial setup).
 
@@ -35,23 +41,45 @@ def get_user_schema(defaults: Mapping[str, Any] | None = None) -> vol.Schema:
 
     """
     defaults = defaults or {}
+    stations = stations or {}
+
     return vol.Schema(
         {
-            vol.Required(
-                CONF_USERNAME,
-                default=defaults.get(CONF_USERNAME, vol.UNDEFINED),
-            ): selector.TextSelector(
-                selector.TextSelectorConfig(
-                    type=selector.TextSelectorType.TEXT,
+            vol.Required(CONF_STATION): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[{"label": name, "value": stn_id} for stn_id, name in stations.items()],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
                 ),
             ),
-            vol.Required(CONF_PASSWORD): selector.TextSelector(
-                selector.TextSelectorConfig(
-                    type=selector.TextSelectorType.PASSWORD,
-                ),
-            ),
+            # vol.Optional(CONF_STATION_CODE): selector.TextSelector(
+            #     selector.TextSelectorConfig(
+            #         type=selector.TextSelectorType.TEXT,
+            #     ),
+            # ),
         },
     )
+    # if len(stations.items()) > 0:
+    # station_schema = selector.SelectSelector(
+    #             selector.SelectSelectorConfig(
+    #                 options=[{"label": id, "value": name} for id, name in stations.items()],
+    #                 mode=selector.SelectSelectorMode.LIST,
+    #             ),
+    #         ),
+
+    # return DATA_SCHEMA.extend({
+    #     vol.Required(
+    #         CONF_STATION,
+    #         description={"selector": station_schema}
+    #     ): str
+    # })
+
+    # return vol.Schema(
+    #     {
+    #         vol.Required(
+    #             CONF_STATION): station_schema
+
+    #     },
+    # )
 
 
 def get_reconfigure_schema(username: str) -> vol.Schema:
@@ -66,23 +94,7 @@ def get_reconfigure_schema(username: str) -> vol.Schema:
 
     """
     return vol.Schema(
-        {
-            vol.Required(
-                CONF_USERNAME,
-                default=username,
-            ): selector.TextSelector(
-                selector.TextSelectorConfig(
-                    type=selector.TextSelectorType.TEXT,
-                ),
-            ),
-            vol.Required(
-                CONF_PASSWORD,
-            ): selector.TextSelector(
-                selector.TextSelectorConfig(
-                    type=selector.TextSelectorType.PASSWORD,
-                ),
-            ),
-        },
+        {},
     )
 
 
@@ -98,23 +110,7 @@ def get_reauth_schema(username: str) -> vol.Schema:
 
     """
     return vol.Schema(
-        {
-            vol.Required(
-                CONF_USERNAME,
-                default=username,
-            ): selector.TextSelector(
-                selector.TextSelectorConfig(
-                    type=selector.TextSelectorType.TEXT,
-                ),
-            ),
-            vol.Required(
-                CONF_PASSWORD,
-            ): selector.TextSelector(
-                selector.TextSelectorConfig(
-                    type=selector.TextSelectorType.PASSWORD,
-                ),
-            ),
-        },
+        {},
     )
 
 

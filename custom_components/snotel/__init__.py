@@ -21,16 +21,14 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from custom_components.snotel.api.client import create_new_client
+from homeassistant.const import Platform
 import homeassistant.helpers.config_validation as cv
 from homeassistant.loader import async_get_loaded_integration
 
-from .api import SnotelApiClient
 from .const import DOMAIN, LOGGER
 from .coordinator import SnotelDataUpdateCoordinator
 from .data import SnotelData
-from .service_actions import async_setup_services
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -38,13 +36,7 @@ if TYPE_CHECKING:
     from .data import SnotelConfigEntry
 
 PLATFORMS: list[Platform] = [
-    Platform.BINARY_SENSOR,
-    Platform.BUTTON,
-    Platform.FAN,
-    Platform.NUMBER,
-    Platform.SELECT,
     Platform.SENSOR,
-    Platform.SWITCH,
 ]
 
 # This integration is configured via config entries only
@@ -73,7 +65,6 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     For more information:
     https://developers.home-assistant.io/docs/dev_101_services
     """
-    await async_setup_services(hass)
     return True
 
 
@@ -113,11 +104,7 @@ async def async_setup_entry(
     https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry
     """
     # Initialize client first
-    client = SnotelApiClient(
-        username=entry.data[CONF_USERNAME],  # From config flow setup
-        password=entry.data[CONF_PASSWORD],  # From config flow setup
-        session=async_get_clientsession(hass),
-    )
+    client = create_new_client(hass)
 
     # Initialize coordinator with config_entry
     coordinator = SnotelDataUpdateCoordinator(

@@ -28,7 +28,7 @@ repos:
         language: system
         types: [python]
         require_serial: true
-        pass_filenames: true
+        pass_filenames: false
 
       # YAML linting
       - id: yamllint

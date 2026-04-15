@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING
 from custom_components.snotel.const import PARALLEL_UPDATES as PARALLEL_UPDATES
 from homeassistant.components.sensor import SensorEntityDescription
 
-from .air_quality import ENTITY_DESCRIPTIONS as AIR_QUALITY_DESCRIPTIONS, SnotelAirQualitySensor
-from .diagnostic import ENTITY_DESCRIPTIONS as DIAGNOSTIC_DESCRIPTIONS, SnotelDiagnosticSensor
+from .hourly import HOURLY_ENTITY_DESCRIPTIONS, SnotelBasicSensor
 
 if TYPE_CHECKING:
     from custom_components.snotel.data import SnotelConfigEntry
@@ -16,10 +15,7 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 # Combine all entity descriptions from different modules
-ENTITY_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
-    *AIR_QUALITY_DESCRIPTIONS,
-    *DIAGNOSTIC_DESCRIPTIONS,
-)
+ENTITY_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (*HOURLY_ENTITY_DESCRIPTIONS,)
 
 
 async def async_setup_entry(
@@ -30,17 +26,9 @@ async def async_setup_entry(
     """Set up the sensor platform."""
     # Add air quality sensors
     async_add_entities(
-        SnotelAirQualitySensor(
+        SnotelBasicSensor(
             coordinator=entry.runtime_data.coordinator,
             entity_description=entity_description,
         )
-        for entity_description in AIR_QUALITY_DESCRIPTIONS
-    )
-    # Add diagnostic sensors
-    async_add_entities(
-        SnotelDiagnosticSensor(
-            coordinator=entry.runtime_data.coordinator,
-            entity_description=entity_description,
-        )
-        for entity_description in DIAGNOSTIC_DESCRIPTIONS
+        for entity_description in HOURLY_ENTITY_DESCRIPTIONS
     )

@@ -16,13 +16,17 @@ from typing import TYPE_CHECKING, Any
 
 from slugify import slugify
 
+from custom_components.snotel.api.client import create_new_client
 from custom_components.snotel.config_flow_handler.schemas import (
     get_reauth_schema,
     get_reconfigure_schema,
     get_user_schema,
 )
 from custom_components.snotel.config_flow_handler.validators import validate_credentials
-from custom_components.snotel.const import DOMAIN, LOGGER
+from custom_components.snotel.config_flow_handler.validators.credentials import validate_station
+from custom_components.snotel.const import CONF_STATION, DOMAIN, LOGGER
+from custom_components.snotel.snotel_api.api.station_metadata import get_stations
+from custom_components.snotel.snotel_api.types import Unset
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
@@ -89,10 +93,9 @@ class SnotelConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await validate_credentials(
+                station = await validate_station(
                     self.hass,
-                    username=user_input[CONF_USERNAME],
-                    password=user_input[CONF_PASSWORD],
+                    station_code=user_input[CONF_STATION],
                 )
             except Exception as exception:  # noqa: BLE001
                 errors["base"] = self._map_exception_to_error(exception)
@@ -100,17 +103,36 @@ class SnotelConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 # Set unique ID based on username
                 # NOTE: This is just an example - use a proper unique ID in production
                 # See: https://developers.home-assistant.io/docs/config_entries_config_flow_handler#unique-ids
-                await self.async_set_unique_id(slugify(user_input[CONF_USERNAME]))
+                await self.async_set_unique_id(slugify(user_input[CONF_STATION]))
                 self._abort_if_unique_id_configured()
 
                 return self.async_create_entry(
-                    title=user_input[CONF_USERNAME],
+                    title=f"{station.name}, {station.state_code or station.county_name}" or user_input[CONF_STATION],
                     data=user_input,
                 )
 
+        client = create_new_client(self.hass)
+        try:
+            async with client as client:
+                stations = await get_stations.asyncio(client=client)
+        except Exception as exception:  # noqa: BLE001
+            errors["base"] = self._map_exception_to_error(exception)
+            stations = []
+
+        stations = stations or []
+
         return self.async_show_form(
             step_id="user",
-            data_schema=get_user_schema(user_input),
+            data_schema=get_user_schema(
+                user_input,
+                stations={
+                    station.station_triplet: f"{station.name}, {station.state_code or station.county_name}"
+                    for station in stations
+                    if not isinstance(station.station_triplet, Unset)
+                    and not isinstance(station.name, Unset)
+                    and station is not None
+                },
+            ),
             errors=errors,
             description_placeholders={
                 "documentation_url": "https://github.com/aidanlloydtucker/ha-snotel",
