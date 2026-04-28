@@ -12,3 +12,4 @@
 scikit-learn
 numpy
 pandas
+python-slugify

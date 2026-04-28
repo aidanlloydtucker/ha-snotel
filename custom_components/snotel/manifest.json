@@ -9,5 +9,11 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/aidanlloydtucker/ha-snotel/issues",
+  "requirements": [
+    "numpy",
+    "pandas",
+    "python-slugify",
+    "scikit-learn"
+  ],
   "version": "0.1.0"
 }
