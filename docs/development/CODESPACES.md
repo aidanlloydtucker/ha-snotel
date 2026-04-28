@@ -4,13 +4,13 @@ Snotel is fully compatible with GitHub Codespaces for cloud-based development.
 
 ## Quick Start
 
-### Initial Setup (Template Users)
+### Initial Setup
 
 1. Click "Code" → "Codespaces" → "Create codespace on main"
 2. Wait 2-3 minutes for automated setup
-3. **Run `./initialize.sh`** in the terminal to configure your integration
-4. Follow the prompts to customize your integration
-5. Start developing!
+3. Run `./script/develop` to start the local Home Assistant instance
+4. Open the forwarded port 8123 URL
+5. Add the SNOTEL integration from **Settings** → **Devices & Services**
 
 ### Testing Copilot Agent Changes
 
@@ -21,7 +21,7 @@ When testing a pull request created by GitHub Copilot Coding Agent:
 3. Run `./script/develop` to start Home Assistant
 4. Test the integration in the browser (port 8123 forwards automatically)
 
-For the complete Copilot Agent workflow, see [COPILOT_AGENT.md](COPILOT_AGENT.md).
+For AI-agent-specific guidance, see [COPILOT_AGENT.md](COPILOT_AGENT.md).
 
 ## What Works Automatically
 

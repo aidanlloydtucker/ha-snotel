@@ -1,249 +1,88 @@
 # Configuration Reference
 
-This document describes all configuration options and settings available in the Snotel custom integration.
+SNOTEL is configured entirely through the Home Assistant UI. YAML configuration is not supported.
 
-## Integration Configuration
+## Setup Methods
 
-### Initial Setup Options
+### Search for a Station
 
-These options are configured during initial setup via the Home Assistant UI.
+The integration fetches AWDB station metadata and shows available stations in a dropdown. The selected station triplet is stored in the config entry as `station_code`.
 
-#### Connection Settings
+### Closest Station to Latitude/Longitude
 
-| Option      | Type    | Required | Default | Description                                  |
-| ----------- | ------- | -------- | ------- | -------------------------------------------- |
-| **Host**    | string  | Yes      | -       | Hostname or IP address of the device/service |
-| **Port**    | integer | No       | 8080    | Connection port                              |
-| **API Key** | string  | Yes\*    | -       | Authentication key or token                  |
-| **Use SSL** | boolean | No       | false   | Enable HTTPS connection                      |
+The integration fetches AWDB station metadata, filters stations with coordinates, and uses a haversine nearest-neighbor search to find the closest station.
 
-\*Required if the device/service requires authentication.
+| Field     | Type   | Required | Default                  |
+| --------- | ------ | -------- | ------------------------ |
+| Latitude  | number | Yes      | Home Assistant latitude  |
+| Longitude | number | Yes      | Home Assistant longitude |
 
-#### Update Settings
+The original coordinates are stored in the config entry for reference, but polling uses the selected station triplet.
 
-| Option              | Type              | Required | Default  | Description                                         |
-| ------------------- | ----------------- | -------- | -------- | --------------------------------------------------- |
-| **Update Interval** | integer (seconds) | No       | 300      | How often to poll for updates (minimum: 30 seconds) |
-| **Name**            | string            | No       | "Device" | Friendly name for the integration instance          |
+### Manual Station Triplet
 
-### Options Flow (Reconfiguration)
+Use this when you already know the AWDB station triplet.
 
-After initial setup, you can modify settings:
+| Field           | Type   | Required | Example       |
+| --------------- | ------ | -------- | ------------- |
+| Station Triplet | string | Yes      | `539:CO:SNTL` |
 
-1. Go to **Settings** → **Devices & Services**
-2. Find "Snotel"
-3. Click **Configure**
-4. Modify settings
-5. Click **Submit**
+The integration validates the station with AWDB before saving the entry.
 
-**Available options:**
+## Config Entry Data
 
-- Update interval
-- Name/identifier
-- Connection timeout
-- Additional features (device-specific)
+The current config entry data contains:
 
-## Entity Configuration
+| Key            | Description                                               |
+| -------------- | --------------------------------------------------------- |
+| `setup_type`   | One of `station_search`, `lat_long`, or `station_triplet` |
+| `station_code` | AWDB station triplet used for all API calls               |
+| `latitude`     | Stored only for latitude/longitude setup                  |
+| `longitude`    | Stored only for latitude/longitude setup                  |
 
-### Entity Customization
+The station triplet is slugified and used as the config entry unique ID to prevent duplicate entries for the same station.
 
-Customize entities via the UI or `configuration.yaml`:
+## Polling
 
-#### Via Home Assistant UI
+The integration polls once per hour. The coordinator requests hourly data with:
 
-1. Go to **Settings** → **Devices & Services** → **Entities**
-2. Find and click the entity
-3. Click the settings icon
-4. Modify:
-   - Entity ID
-   - Name
-   - Icon
-   - Device class (for applicable entities)
-   - Area assignment
+- Station triplet: configured `station_code`
+- Elements: `PREC,SNWD,TOBS,WTEQ`
+- Duration: hourly
+- Begin date: `0`, which asks AWDB for the latest available values
 
-#### Via configuration.yaml
+## Entities
 
-```yaml
-homeassistant:
-  customize:
-    sensor.device_name_sensor:
-      friendly_name: "Custom Sensor Name"
-      icon: mdi:custom-icon
-      unit_of_measurement: "units"
-```
+| Sensor                           | Source element            | Unit      | State class | Device class  |
+| -------------------------------- | ------------------------- | --------- | ----------- | ------------- |
+| Precip Accumulation (Water Year) | `PREC`                    | in        | total       | precipitation |
+| Snow Depth                       | `SNWD`                    | in        | measurement | precipitation |
+| Temperature                      | `TOBS`                    | °F        | measurement | temperature   |
+| Snow Water Equivalent            | `WTEQ`                    | in        | measurement | precipitation |
+| Last Updated                     | latest returned timestamp | timestamp | none        | timestamp     |
 
-### Disabling Entities
+The measurement sensors expose a `last_updated` attribute with the coordinator timestamp.
 
-If you don't need certain entities:
+## Device
 
-1. Go to **Settings** → **Devices & Services** → **Entities**
-2. Find the entity
-3. Click it, then click **Settings** icon
-4. Toggle **Enable entity** off
+All entities for a station are grouped under one Home Assistant device:
 
-Disabled entities won't update or consume resources.
+| Field        | Value                                  |
+| ------------ | -------------------------------------- |
+| Name         | `SNOTEL: <station title>`              |
+| Manufacturer | Natural Resources Conservation Service |
+| Entry type   | Service                                |
 
 ## Services
 
-The integration provides the following services:
+This integration does not currently register custom services.
 
-### `snotel.example_service`
+## Diagnostics
 
-Execute an example service action on the device.
-
-**Service data:**
-
-| Parameter   | Type           | Required | Description                                      |
-| ----------- | -------------- | -------- | ------------------------------------------------ |
-| `entity_id` | string or list | No       | Target entity/entities (if omitted, targets all) |
-| `parameter` | string         | Yes      | Service-specific parameter                       |
-| `value`     | integer        | No       | Numeric value for the action                     |
-
-**Example:**
-
-```yaml
-service: snotel.example_service
-target:
-  entity_id: switch.device_name_switch
-data:
-  parameter: "setting_name"
-  value: 42
-```
-
-### Using Services in Automations
-
-```yaml
-automation:
-  - alias: "Call service at sunset"
-    trigger:
-      - trigger: sun
-        event: sunset
-    action:
-      - action: snotel.example_service
-        target:
-          entity_id: switch.device_name_switch
-        data:
-          parameter: "mode"
-          value: 1
-```
-
-## Advanced Configuration
-
-### Multiple Instances
-
-You can add multiple instances of this integration for different devices:
-
-1. Go to **Settings** → **Devices & Services**
-2. Click **+ Add Integration**
-3. Search for "Snotel"
-4. Configure with different connection details
-
-Each instance creates separate entities with unique entity IDs.
-
-### Network Configuration
-
-If the device is on a different network or behind a firewall:
-
-- Ensure ports are open (default: 8080)
-- Configure port forwarding if needed
-- Consider VPN for remote access
-- Some devices may require static IP addresses
-
-### Polling Behavior
-
-The integration uses polling to fetch updates:
-
-- **Minimum interval:** 30 seconds (prevents overloading the device)
-- **Recommended interval:** 5 minutes (default)
-- **Longer intervals:** Save resources but reduce responsiveness
-
-Adjust based on your needs:
-
-- Real-time monitoring: 30-60 seconds
-- Regular updates: 5 minutes
-- Slow-changing values: 15-30 minutes
-
-## Diagnostic Data
-
-The integration provides diagnostic data for troubleshooting:
-
-1. Go to **Settings** → **Devices & Services**
-2. Find "Snotel"
-3. Click on the device
-4. Click **Download Diagnostics**
-
-Diagnostic data includes:
-
-- Connection status
-- Last update timestamp
-- API response data
-- Entity states
-- Error history
-
-**Privacy note:** Diagnostic data may contain sensitive information. Review before sharing.
-
-## Blueprints
-
-The integration works with Home Assistant Blueprints for reusable automations:
-
-### Example Blueprint
-
-```yaml
-blueprint:
-  name: Snotel Alert
-  description: Send notification when sensor exceeds threshold
-  domain: automation
-  input:
-    sensor_entity:
-      name: Sensor
-      selector:
-        entity:
-          domain: sensor
-          integration: snotel
-    threshold:
-      name: Threshold
-      selector:
-        number:
-          min: 0
-          max: 100
-
-trigger:
-  - trigger: numeric_state
-    entity_id: !input sensor_entity
-    above: !input threshold
-
-action:
-  - action: notify.notify
-    data:
-      message: "Sensor exceeded threshold!"
-```
-
-## Configuration Examples
-
-See [EXAMPLES.md](./EXAMPLES.md) for complete automation and dashboard examples.
-
-## Troubleshooting Configuration
-
-### Config Entry Fails to Load
-
-If the integration fails to load after configuration:
-
-1. Check Home Assistant logs for errors
-2. Verify connection details are correct
-3. Test connectivity from Home Assistant to the device
-4. Try removing and re-adding the integration
-
-### Options Don't Save
-
-If configuration changes aren't persisted:
-
-1. Check for validation errors in the UI
-2. Ensure values are within allowed ranges
-3. Review logs for detailed error messages
-4. Try restarting Home Assistant
+Diagnostics support is present in the integration. Download diagnostics from **Settings** → **Devices & Services** → **SNOTEL** when reporting issues. Review diagnostics before sharing publicly.
 
 ## Related Documentation
 
-- [Getting Started](./GETTING_STARTED.md) - Installation and initial setup
-- [Examples](./EXAMPLES.md) - Automation and dashboard examples
-- [GitHub Issues](https://github.com/aidanlloydtucker/ha-snotel/issues) - Report problems
+- [Getting Started](./GETTING_STARTED.md)
+- [Examples](./EXAMPLES.md)
+- [GitHub Issues](https://github.com/aidanlloydtucker/ha-snotel/issues)

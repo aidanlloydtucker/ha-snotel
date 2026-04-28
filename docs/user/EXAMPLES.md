@@ -1,163 +1,121 @@
 # Examples
 
-This page provides ready-to-use examples for automations, dashboards, and blueprints
-with the Snotel custom integration.
-
-Replace entity IDs like `sensor.device_name_*` with your actual entity IDs after
-setting up the integration.
-
-## Automations
-
-### Notify when a sensor exceeds a threshold
-
-```yaml
-automation:
-  - alias: "Alert when sensor is high"
-    trigger:
-      - trigger: numeric_state
-        entity_id: sensor.device_name_air_quality
-        above: 100
-    action:
-      - action: notify.notify
-        data:
-          title: "Air quality alert"
-          message: "Sensor value exceeded 100!"
-```
-
-### Turn on a switch when connectivity is lost
-
-```yaml
-automation:
-  - alias: "React to connectivity loss"
-    trigger:
-      - trigger: state
-        entity_id: binary_sensor.device_name_connectivity
-        to: "off"
-        for:
-          minutes: 5
-    action:
-      - action: switch.turn_off
-        target:
-          entity_id: switch.device_name_switch
-```
-
-### Call a service action on schedule
-
-```yaml
-automation:
-  - alias: "Reset filter counter weekly"
-    trigger:
-      - trigger: time
-        at: "03:00:00"
-    condition:
-      - condition: time
-        weekday:
-          - mon
-    action:
-      - action: snotel.example_service
-        target:
-          entity_id: button.device_name_reset_filter
-```
-
-### Use a blueprint for threshold alerts
-
-Save this as a blueprint file and import it in Home Assistant:
-
-```yaml
-blueprint:
-  name: Snotel — Threshold Alert
-  description: Send a notification when a sensor exceeds a configurable threshold.
-  domain: automation
-  input:
-    sensor_entity:
-      name: Sensor
-      selector:
-        entity:
-          domain: sensor
-          integration: snotel
-    threshold:
-      name: Threshold value
-      selector:
-        number:
-          min: 0
-          max: 1000
-    notify_target:
-      name: Notification service
-      default: notify.notify
-      selector:
-        text:
-
-trigger:
-  - trigger: numeric_state
-    entity_id: !input sensor_entity
-    above: !input threshold
-
-action:
-  - action: !input notify_target
-    data:
-      message: >-
-        {{ state_attr(trigger.entity_id, 'friendly_name') }}
-        exceeded {{ threshold }} (current value: {{ trigger.to_state.state }}).
-```
+These examples use placeholder entity IDs. Replace them with the entity IDs Home Assistant created for your SNOTEL station.
 
 ## Dashboard Cards
 
-### Sensor value card
-
-```yaml
-type: sensor
-entity: sensor.device_name_air_quality
-name: Air Quality
-graph: line
-```
-
-### Device summary — entities card
+### Station Summary
 
 ```yaml
 type: entities
-title: My Device
+title: SNOTEL Station
 entities:
-  - entity: sensor.device_name_air_quality
-    name: Air Quality
-  - entity: binary_sensor.device_name_connectivity
-    name: Connected
-  - entity: binary_sensor.device_name_filter
-    name: Filter Status
-  - entity: switch.device_name_switch
-    name: Power
-  - entity: select.device_name_fan_speed
-    name: Fan Speed
-  - entity: number.device_name_threshold
-    name: Threshold
+  - entity: sensor.example_station_snow_depth
+    name: Snow Depth
+  - entity: sensor.example_station_snow_water_equivalent
+    name: Snow Water Equivalent
+  - entity: sensor.example_station_precip_accumulation_water_year
+    name: Precipitation
+  - entity: sensor.example_station_temperature
+    name: Temperature
+  - entity: sensor.example_station_last_updated
+    name: Last Updated
 ```
 
-### Status badge — multiple entities
-
-```yaml
-type: glance
-title: Device Status
-entities:
-  - entity: binary_sensor.device_name_connectivity
-    name: Online
-  - entity: sensor.device_name_air_quality
-    name: Air Quality
-  - entity: binary_sensor.device_name_filter
-    name: Filter
-show_state: true
-```
-
-### History graph
+### Snow Depth Graph
 
 ```yaml
 type: history-graph
-title: Air Quality (last 24 h)
+title: Snow Depth
 entities:
-  - entity: sensor.device_name_air_quality
-hours_to_show: 24
+  - sensor.example_station_snow_depth
+hours_to_show: 72
+```
+
+### Weather Glance
+
+```yaml
+type: glance
+title: Mountain Conditions
+entities:
+  - entity: sensor.example_station_temperature
+    name: Temperature
+  - entity: sensor.example_station_snow_depth
+    name: Snow Depth
+  - entity: sensor.example_station_snow_water_equivalent
+    name: SWE
+show_state: true
+```
+
+## Automations
+
+### Notify When Snow Depth Exceeds a Threshold
+
+```yaml
+automation:
+  - alias: "SNOTEL snow depth threshold"
+    trigger:
+      - trigger: numeric_state
+        entity_id: sensor.example_station_snow_depth
+        above: 24
+    action:
+      - action: notify.notify
+        data:
+          title: "SNOTEL snow depth"
+          message: "Snow depth is now {{ states('sensor.example_station_snow_depth') }} inches."
+```
+
+### Notify On New Station Data
+
+```yaml
+automation:
+  - alias: "SNOTEL data updated"
+    trigger:
+      - trigger: state
+        entity_id: sensor.example_station_last_updated
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state is not none and trigger.to_state.state not in ['unknown', 'unavailable'] }}"
+    action:
+      - action: notify.notify
+        data:
+          title: "SNOTEL updated"
+          message: >-
+            Latest reading: {{ trigger.to_state.state }}.
+            Snow depth is {{ states('sensor.example_station_snow_depth') }} in.
+```
+
+### Detect Freezing Observed Temperature
+
+```yaml
+automation:
+  - alias: "SNOTEL observed temperature below freezing"
+    trigger:
+      - trigger: numeric_state
+        entity_id: sensor.example_station_temperature
+        below: 32
+    action:
+      - action: notify.notify
+        data:
+          title: "Freezing temperature"
+          message: "Observed SNOTEL temperature is {{ states('sensor.example_station_temperature') }} °F."
+```
+
+## Template Sensor
+
+### Snowpack Summary
+
+```yaml
+template:
+  - sensor:
+      - name: "SNOTEL Snowpack Summary"
+        state: >-
+          {{ states('sensor.example_station_snow_depth') }} in depth,
+          {{ states('sensor.example_station_snow_water_equivalent') }} in SWE
 ```
 
 ## Related Documentation
 
-- [Configuration Reference](./CONFIGURATION.md) - All configuration options
-- [Getting Started](./GETTING_STARTED.md) - Installation and initial setup
-- [GitHub Issues](https://github.com/aidanlloydtucker/ha-snotel/issues) - Report problems
+- [Configuration Reference](./CONFIGURATION.md)
+- [Getting Started](./GETTING_STARTED.md)
+- [GitHub Issues](https://github.com/aidanlloydtucker/ha-snotel/issues)

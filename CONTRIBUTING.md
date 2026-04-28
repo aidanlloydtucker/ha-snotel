@@ -52,16 +52,16 @@ This project uses:
 
 Run `script/check` to lint and type-check your code before submitting, or `script/lint` to auto-format and fix linting issues.
 
-**Local validation:** Run `script/hassfest` to validate your integration against Home Assistant's quality standards using the official validation tools. This checks manifest.json, translations, services.yaml (service action definitions), and integration structure locally before pushing to GitHub.
+**Local validation:** Run `script/hassfest` to validate the integration against Home Assistant's quality standards using the official validation tools. This checks `manifest.json`, translations, and integration structure locally before pushing to GitHub.
 
 ## GitHub Copilot Support
 
 This project includes [prompt files](./.github/prompts/) to help you work more efficiently with GitHub Copilot. These reusable templates provide context and requirements for common tasks:
 
 - **Add New Sensor** - Create sensors with proper structure
-- **Add New Service** - Implement services with validation
+- **Add New Sensor** - Add another AWDB-backed sensor
 - **Add Config Option** - Add configuration options to flows
-- **Add Entity to Device** - Expand device capabilities
+- **Debug Coordinator Issue** - Diagnose data update problems
 - **Debug Coordinator Issue** - Diagnose data update problems
 - **Update Translations** - Manage multilingual strings
 
@@ -79,11 +79,11 @@ This blueprint follows Home Assistant's [integration quality standards](https://
 
 - ✅ Comprehensive docstrings with links to official documentation
 - ✅ Full type hints for better IDE support
-- ✅ Config flow with reauthentication support
+- ✅ Config flow with station search, coordinate lookup, and manual station triplets
 - ✅ Proper error handling and entity unavailability
 - ✅ Coordinator pattern for efficient data fetching
 
-**Don't worry!** You don't need to maintain all of this. The blueprint gives you a solid, well-documented starting point. Feel free to simplify or adapt anything to your needs - the goal is to help you get started quickly with good patterns, not to overwhelm you with requirements.
+The integration follows Home Assistant patterns where practical while staying focused on public SNOTEL station data.
 
 ## Test your code modification
 

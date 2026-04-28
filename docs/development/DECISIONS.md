@@ -1,137 +1,123 @@
 # Architectural and Design Decisions
 
-This document records significant architectural and design decisions made during the development of this integration.
-
-## Format
-
-Each decision is documented with:
-
-- **Date:** When the decision was made
-- **Context:** Why this decision was necessary
-- **Decision:** What was decided
-- **Rationale:** Why this approach was chosen
-- **Consequences:** Expected impacts and trade-offs
-
----
+This document records significant architectural and design decisions made during development.
 
 ## Decision Log
 
-### Use DataUpdateCoordinator for All Data Fetching
+### Use the Public AWDB REST API Directly
 
-**Date:** 2025-11-29 (Template initialization)
+**Date:** 2026-04-28
 
-**Context:** The integration needs to fetch data from an external API and share it with multiple entities. Home Assistant provides several patterns for this.
+**Context:** SNOTEL data is exposed through the USDA NRCS AWDB REST API. The integration needs station metadata and recent station observations.
 
-**Decision:** Use `DataUpdateCoordinator` from `homeassistant.helpers.update_coordinator` as the central data management component.
-
-**Rationale:**
-
-- Provides built-in support for update intervals and error handling
-- Automatic retry with exponential backoff
-- Shared data access prevents duplicate API calls
-- Standard pattern recommended by Home Assistant
-- Entities automatically become unavailable when coordinator fails
-
-**Consequences:**
-
-- All entities must inherit from `CoordinatorEntity`
-- Single update interval applies to all entities
-- Data is fetched even if no entities are enabled
-- Coordinator manages entity lifecycle and availability
-
----
-
-### Separate API Client from Coordinator
-
-**Date:** 2025-11-29 (Template initialization)
-
-**Context:** The coordinator needs to fetch data, but business logic should be separated from data transport.
-
-**Decision:** Implement API communication in separate `api/client.py` module, coordinator only orchestrates updates.
+**Decision:** Use the AWDB REST API directly through a generated async client stored in `custom_components/snotel/snotel_api/`.
 
 **Rationale:**
 
-- Separation of concerns: transport vs. orchestration
-- Easier to test API client in isolation
-- Simpler to swap API implementation if needed
-- Clearer error handling boundaries
+- AWDB already exposes the data needed by the integration.
+- A generated client gives typed models for a large API surface.
+- The generated client can be isolated from hand-written Home Assistant integration code.
 
 **Consequences:**
 
-- Additional abstraction layer
-- Coordinator depends on API client
-- API client raises custom exceptions for error translation
+- Generated code is excluded from lint and type-checking.
+- Integration code should keep AWDB-specific transformation in coordinator/data processing modules.
+- API model changes may require regenerating or updating the generated client.
 
 ---
 
-### Platform-Specific Directories
+### One Config Entry per Station
 
-**Date:** 2025-11-29 (Template initialization)
+**Date:** 2026-04-28
 
-**Context:** Integration supports multiple platforms (sensor, binary_sensor, switch, etc.).
+**Context:** Users may want to monitor one or more SNOTEL stations. AWDB station triplets are stable station identifiers.
 
-**Decision:** Each platform gets its own directory with individual entity files.
+**Decision:** Each config entry represents exactly one station, and the station triplet is used as the unique ID.
 
 **Rationale:**
 
-- Clear organization as integration grows
-- Easier to find specific entity implementations
-- Supports multiple entities per platform cleanly
-- Follows Home Assistant Core pattern
+- Matches Home Assistant's config entry and device model cleanly.
+- Prevents duplicate setup of the same station.
+- Keeps coordinator data simple: one station payload per entry.
 
 **Consequences:**
 
-- More files/directories than single-file approach
-- Platform `__init__.py` must import and register entities
-- Slightly more initial setup overhead
+- Monitoring multiple stations requires multiple config entries.
+- A future multi-station entry model would be a breaking architectural change.
 
 ---
 
-### EntityDescription for Static Metadata
+### Provide Three Setup Paths
 
-**Date:** 2025-11-29 (Template initialization)
+**Date:** 2026-04-28
 
-**Context:** Entities have static metadata (name, icon, device class) that doesn't change.
+**Context:** Some users know the exact station triplet, while others know only a station name or an area.
 
-**Decision:** Use `EntityDescription` dataclasses to define static entity metadata.
+**Decision:** Support station search, nearest station from latitude/longitude, and manual station triplet setup.
 
 **Rationale:**
 
-- Declarative and easy to read
-- Type-safe with dataclasses
-- Recommended Home Assistant pattern
-- Separates static configuration from dynamic behavior
+- Station search helps users who know a station name.
+- Latitude/longitude setup is convenient for users who care about a location instead of a specific station.
+- Manual station triplet setup keeps advanced users in control.
 
 **Consequences:**
 
-- Each entity type needs an EntityDescription
-- Dynamic entities need custom handling
-- Static and dynamic properties clearly separated
+- Config flow setup depends on fetching AWDB station metadata.
+- Latitude/longitude setup requires `numpy`, `pandas`, and `scikit-learn` at runtime.
 
 ---
+
+### Use DataUpdateCoordinator for Polling
+
+**Date:** 2026-04-28
+
+**Context:** Multiple sensors share the same station data and should refresh on the same schedule.
+
+**Decision:** Use a single `DataUpdateCoordinator` per station config entry.
+
+**Rationale:**
+
+- Prevents duplicate API calls for each entity.
+- Follows Home Assistant's standard polling integration pattern.
+- Provides shared availability and error handling behavior.
+
+**Consequences:**
+
+- All station entities share a one-hour refresh cadence.
+- Entities must read from `coordinator.data` rather than calling AWDB directly.
+
+---
+
+### Start with Hourly Sensor Entities Only
+
+**Date:** 2026-04-28
+
+**Context:** The current implementation fetches latest hourly observation values for weather and snowpack measurements.
+
+**Decision:** Implement only the sensor platform for `PREC`, `SNWD`, `TOBS`, `WTEQ`, and the latest timestamp.
+
+**Rationale:**
+
+- These entities map directly to AWDB data currently fetched by the coordinator.
+- Sensors are the appropriate Home Assistant platform for read-only station measurements.
+- Avoids template-generated control platforms that do not apply to SNOTEL data.
+
+**Consequences:**
+
+- There are no switches, buttons, selects, numbers, fans, or binary sensors.
+- Adding daily values, forecasts, or additional elements should extend the coordinator mapping and sensor descriptions.
 
 ## Future Considerations
 
-### State Restoration
+### Additional AWDB Elements
 
-**Status:** Not yet implemented
+Add more sensors for daily values or other AWDB element codes once the coordinator supports fetching and transforming them.
 
-Consider implementing state restoration for switches and configurable settings to maintain state across Home Assistant restarts when the external device is unavailable.
+### Configurable Polling or Elements
 
-### Multi-Device Support
+An options flow could let users choose update interval or enabled AWDB elements. This is not implemented today.
 
-**Status:** Not yet implemented
+### Station Metadata in Device Info
 
-Current architecture assumes single device per config entry. If multi-device support is needed, coordinator data structure will need redesign to map device ID → data.
-
-### Polling vs. Push
-
-**Status:** Uses polling
-
-Currently implements polling-based updates. If the API supports webhooks or WebSocket, consider implementing push-based updates for real-time responsiveness.
-
----
-
-## Decision Review
-
-These decisions should be reviewed periodically (suggested: quarterly or when major features are added) to ensure they still serve the integration's needs.
+The base device could expose model, configuration URL, or additional metadata if AWDB provides stable values suitable for Home Assistant device info.
