@@ -19,17 +19,19 @@ from typing import Any
 
 import voluptuous as vol
 
-from custom_components.snotel.const import CONF_STATION
-from homeassistant.helpers import selector
-
-DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_STATION): str,
-    }
+from custom_components.snotel.const import (
+    CONF_SETUP_TYPE,
+    CONF_SETUP_TYPE_LAT_LONG,
+    CONF_SETUP_TYPE_STATION_SEARCH,
+    CONF_SETUP_TYPE_STATION_TRIPLET,
+    CONF_STATION_CODE,
+    CONF_STATION_SEARCH,
 )
+from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
+from homeassistant.helpers import config_validation as cv, selector
 
 
-def get_user_schema(defaults: Mapping[str, Any] | None = None, stations: Mapping[str, str] | None = None) -> vol.Schema:
+def get_user_schema(defaults: Mapping[str, Any] | None = None) -> vol.Schema:
     """
     Get schema for user step (initial setup).
 
@@ -37,7 +39,36 @@ def get_user_schema(defaults: Mapping[str, Any] | None = None, stations: Mapping
         defaults: Optional dictionary of default values to pre-populate the form.
 
     Returns:
-        Voluptuous schema for user credentials input.
+        Voluptuous schema for user input.
+
+    """
+    defaults = defaults or {}
+
+    return vol.Schema(
+        {
+            vol.Required(CONF_SETUP_TYPE): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[CONF_SETUP_TYPE_STATION_SEARCH, CONF_SETUP_TYPE_LAT_LONG, CONF_SETUP_TYPE_STATION_TRIPLET],
+                    translation_key="setup_type_key",
+                    mode=selector.SelectSelectorMode.LIST,
+                ),
+            ),
+        },
+    )
+
+
+def get_station_search_schema(
+    defaults: Mapping[str, Any] | None = None, stations: Mapping[str, str] | None = None
+) -> vol.Schema:
+    """
+    Get schema for station search step (initial setup).
+
+    Args:
+        defaults: Optional dictionary of default values to pre-populate the form.
+        stations: Optional dictionary of station ids to their names to pre-populate in the select list
+
+    Returns:
+        Voluptuous schema for station_search input.
 
     """
     defaults = defaults or {}
@@ -45,77 +76,60 @@ def get_user_schema(defaults: Mapping[str, Any] | None = None, stations: Mapping
 
     return vol.Schema(
         {
-            vol.Required(CONF_STATION): selector.SelectSelector(
+            vol.Required(CONF_STATION_SEARCH): selector.SelectSelector(
                 selector.SelectSelectorConfig(
                     options=[{"label": name, "value": stn_id} for stn_id, name in stations.items()],
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 ),
             ),
-            # vol.Optional(CONF_STATION_CODE): selector.TextSelector(
-            #     selector.TextSelectorConfig(
-            #         type=selector.TextSelectorType.TEXT,
-            #     ),
-            # ),
         },
     )
-    # if len(stations.items()) > 0:
-    # station_schema = selector.SelectSelector(
-    #             selector.SelectSelectorConfig(
-    #                 options=[{"label": id, "value": name} for id, name in stations.items()],
-    #                 mode=selector.SelectSelectorMode.LIST,
-    #             ),
-    #         ),
-
-    # return DATA_SCHEMA.extend({
-    #     vol.Required(
-    #         CONF_STATION,
-    #         description={"selector": station_schema}
-    #     ): str
-    # })
-
-    # return vol.Schema(
-    #     {
-    #         vol.Required(
-    #             CONF_STATION): station_schema
-
-    #     },
-    # )
 
 
-def get_reconfigure_schema(username: str) -> vol.Schema:
+def get_lat_long_schema(defaults: Mapping[str, Any] | None = None) -> vol.Schema:
     """
-    Get schema for reconfigure step.
+    Get schema for lat/long step (initial setup).
 
     Args:
-        username: Current username to pre-fill in the form.
+        defaults: Optional dictionary of default values to pre-populate the form.
 
     Returns:
-        Voluptuous schema for reconfiguration.
+        Voluptuous schema for lat/long input.
 
     """
+    defaults = defaults or {}
+
     return vol.Schema(
-        {},
+        {
+            vol.Required(CONF_LATITUDE, default=defaults[CONF_LATITUDE]): cv.latitude,
+            vol.Required(CONF_LONGITUDE, default=defaults[CONF_LONGITUDE]): cv.longitude,
+        },
     )
 
 
-def get_reauth_schema(username: str) -> vol.Schema:
+def get_station_triplet_schema(defaults: Mapping[str, Any] | None = None) -> vol.Schema:
     """
-    Get schema for reauthentication step.
+    Get schema for station manual triplet step (initial setup).
 
     Args:
-        username: Current username to pre-fill in the form.
+        defaults: Optional dictionary of default values to pre-populate the form.
 
     Returns:
-        Voluptuous schema for reauthentication.
+        Voluptuous schema for station_triplet input.
 
     """
+    defaults = defaults or {}
+
     return vol.Schema(
-        {},
+        {
+            vol.Required(CONF_STATION_CODE): str,
+        },
     )
 
 
 __all__ = [
-    "get_reauth_schema",
-    "get_reconfigure_schema",
+    "get_lat_long_schema",
+    "get_station_search_schema",
+    "get_station_triplet_schema",
     "get_user_schema",
 ]

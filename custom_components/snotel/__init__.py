@@ -21,7 +21,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from custom_components.snotel.api.client import create_new_client
+from custom_components.snotel.api_helper import create_new_client
 from homeassistant.const import Platform
 import homeassistant.helpers.config_validation as cv
 from homeassistant.loader import async_get_loaded_integration

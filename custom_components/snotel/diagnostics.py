@@ -76,7 +76,7 @@ async def async_get_config_entry_diagnostics(
 
     # API client information (no sensitive data)
     api_info = {
-        "base_endpoint": "https://jsonplaceholder.typicode.com",
+        "base_endpoint": "https://wcc.sc.egov.usda.gov/awdbRestApi",
     }
 
     # Integration information

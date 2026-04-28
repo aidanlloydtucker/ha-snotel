@@ -13,12 +13,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from custom_components.snotel.api import SnotelApiClientError
-from custom_components.snotel.const import CONF_STATION, LOGGER
+from custom_components.snotel.const import CONF_STATION_CODE, LOGGER
 from custom_components.snotel.coordinator.data_processing import transform_api_data
 from custom_components.snotel.snotel_api.api.data import get_data
 from custom_components.snotel.snotel_api.api.station_metadata import get_stations
-from custom_components.snotel.snotel_api.errors import UnexpectedStatus
+from custom_components.snotel.snotel_api.errors import SnotelApiClientError, UnexpectedStatus
 from custom_components.snotel.snotel_api.models.get_data_duration import GetDataDuration
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -65,7 +64,9 @@ class SnotelDataUpdateCoordinator(DataUpdateCoordinator):
         # device_info = await self.config_entry.runtime_data.client.get_device_info()
         # self._device_id = device_info["id"]
         async with self.config_entry.runtime_data.client as client:
-            stations = await get_stations.asyncio(client=client, station_triplets=self.config_entry.data[CONF_STATION])
+            stations = await get_stations.asyncio(
+                client=client, station_triplets=self.config_entry.data[CONF_STATION_CODE]
+            )
             if stations and len(stations) == 1:
                 self._station = stations[0]
                 self._station_timezone = self._station.data_time_zone or 0.0
@@ -121,7 +122,7 @@ class SnotelDataUpdateCoordinator(DataUpdateCoordinator):
                 return transform_api_data(
                     await get_data.asyncio(
                         client=client,
-                        station_triplets=self.config_entry.data[CONF_STATION],
+                        station_triplets=self.config_entry.data[CONF_STATION_CODE],
                         elements="PREC,SNWD,TOBS,WTEQ",
                         duration=GetDataDuration.HOURLY,
                         begin_date="0",
@@ -135,10 +136,7 @@ class SnotelDataUpdateCoordinator(DataUpdateCoordinator):
                 translation_key="update_failed",
             ) from exception
         except UnexpectedStatus as exception:
-            LOGGER.exception("Error communicating with API")
-            # If the API provides rate limit information, you can honor it:
-            # if hasattr(exception, 'retry_after'):
-            #     raise UpdateFailed(retry_after=exception.retry_after) from exception
+            LOGGER.warning("API error - %s", exception)
             raise UpdateFailed(
                 translation_domain="snotel",
                 translation_key="update_failed",

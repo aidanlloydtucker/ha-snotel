@@ -4,28 +4,34 @@
       "user": {
         "description": "If you need help with the configuration have a look at the [documentation]({documentation_url}).",
         "data": {
-          "station": "Station"
+          "setup_type": "Setup Type"
         }
       },
-      "reconfigure": {
-        "description": "Update the credentials for this integration.",
+      "station_search": {
+        "description": "Search for a station here.",
         "data": {
-          "username": "Username",
-          "password": "Password"
+          "station_search": "Station"
         }
       },
-      "reauth_confirm": {
-        "title": "Reauthenticate Integration",
-        "description": "The credentials for {username} are no longer valid. Please provide updated credentials to restore access.",
+      "lat_long": {
+        "description": "Find the closest SNOTEL station from any latitude/longitude.",
         "data": {
-          "username": "Username",
-          "password": "Password"
+          "latitude": "Latitude",
+          "longitude": "Longitude"
+        }
+      },
+      "station_triplet": {
+        "description": "Manually specify a station triplet.",
+        "data": {
+          "station_code": "Station Triplet"
         }
       }
     },
     "error": {
       "auth": "Username/Password is wrong.",
       "connection": "Unable to connect to the server.",
+      "config": "Something went wrong when setting up the config.",
+      "unknown_setup_type": "The setup type specified is unknown or unsupported.",
       "unknown": "Unknown error occurred."
     },
     "abort": {
@@ -83,6 +89,15 @@
       },
       "last_updated": {
         "name": "Last Updated"
+      }
+    }
+  },
+  "selector": {
+    "setup_type_key": {
+      "options": {
+        "station_search": "Search for a station",
+        "lat_long": "Closest station to a given latitude/longitude",
+        "station_triplet": "Manually specified station triplet"
       }
     }
   },

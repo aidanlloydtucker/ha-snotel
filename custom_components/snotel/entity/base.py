@@ -13,9 +13,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from custom_components.snotel.const import ATTRIBUTION
+from custom_components.snotel.const import ATTRIBUTION, DOMAIN
 from custom_components.snotel.coordinator import SnotelDataUpdateCoordinator
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 if TYPE_CHECKING:
@@ -60,11 +60,11 @@ class SnotelEntity(CoordinatorEntity[SnotelDataUpdateCoordinator]):
         self._attr_device_info = DeviceInfo(
             identifiers={
                 (
-                    coordinator.config_entry.domain,
+                    DOMAIN,
                     coordinator.config_entry.entry_id,
                 ),
             },
-            name=coordinator.config_entry.title,
-            manufacturer=coordinator.config_entry.domain,
-            model=coordinator.data.get("model", "Unknown"),
+            entry_type=DeviceEntryType.SERVICE,
+            name=f"SNOTEL: {coordinator.config_entry.title}",
+            manufacturer="Natural Resources Conservation Service",
         )
